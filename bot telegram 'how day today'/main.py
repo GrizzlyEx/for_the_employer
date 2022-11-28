@@ -61,7 +61,7 @@ async def echo(message: aiogram.types.Message):
     try:
         await message.answer(f'{parsing()}')
     except:
-        print('обосрался')
+        print('Error')
         await message.answer('Йа сломался')
 
 
