@@ -3,8 +3,11 @@ import requests
 from bs4 import BeautifulSoup as bs
 from security import TOKEN
 
-
-def params_today():
+month = {1:'yanvar', 2:'fevral', 3:'mart',
+         4:'aprel', 5:'may', 6:'iyun',
+         7:'iyul', 8:'avgust', 9:'sentyabr',
+         10:'oktyabr', 11:'noyabr', 12:'dekabr'}
+def params_today(day):
     cookies = {
         'PHPSESSID': 'bn50sroom2odt7dfo228id4l62',
         '_ym_uid': '1669620665125302786',
@@ -31,26 +34,29 @@ def params_today():
         'upgrade-insecure-requests': '1',
         'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36',
     }
-
-    response = requests.get('https://kakoysegodnyaprazdnik.ru/', cookies=cookies, headers=headers)
+    if day:
+        response = requests.get(f'https://kakoysegodnyaprazdnik.ru/baza/{month[day[1]]}/{day[0]}/', cookies=cookies, headers=headers)
+    else:
+        response = requests.get('https://kakoysegodnyaprazdnik.ru/', cookies=cookies, headers=headers)
     #return bs(response.text, 'html.parser').head
     response.encoding = 'utf-8'
     return response.text
 
 
-def parsing(text=params_today()):
+def parsing(day):
+    text = params_today(day)
     #print(bs(text, 'html.parser').h2.text)
     #print(bs(text, 'html.parser').div.div.span.text)
-    #print(bs(text, 'html.parser'))
-    message = ''
-    for i in bs(text, 'html.parser').div.div:
+    message = str(bs(text, 'html.parser').h1.text)+'\n'
+    for i in bs(text, 'html.parser').div.select(".listing_wr")[0]:
+        #print(i)
         if i.text != '\n':
             message+='\n\n•'.join((i.text.split('•')))
-
+    #print(message)
     return message
     #print(bs(text, 'html.parser').div.div.span.text)
-
-
+#print(params_today())
+#print(parsing())
 bot = aiogram.Bot(token=TOKEN)
 db = aiogram.Dispatcher(bot)
 
@@ -58,11 +64,33 @@ db = aiogram.Dispatcher(bot)
 
 @db.message_handler(commands=['day'])
 async def echo(message: aiogram.types.Message):
+    mess_analyse = message.text.split(' ')
+    if len(mess_analyse) > 1:
+        if '.' in mess_analyse[1]:
+            mess_analyse = mess_analyse[1].split('.')
+            if mess_analyse[0].isnumeric() and mess_analyse[1].isnumeric():
+                if int(mess_analyse[1]) > 12 and int(mess_analyse[0]) > 12:
+                    await message.answer('Uncorrect numbers: there are 12 months in a year')
+                    return
+                elif int(mess_analyse[1]) > 12:
+                    day = [int(mess_analyse[1]), int(mess_analyse[0])]
+                else:
+                    day = [int(mess_analyse[0]), int(mess_analyse[1])]
+
+            else:
+                await message.answer('Date shoud have only numbers')
+                return
+        else:
+            await message.answer('Uncorrect date')
+            return
+    else:
+        day = None
+    print(day)
     try:
-        await message.answer(f'{parsing()}')
+        await message.answer(f'{parsing(day)}')
     except:
         print('Error')
-        await message.answer('Йа сломался')
+        await message.answer('MY HEART IS BROKEEEEEN')
 
 
 
