@@ -3,10 +3,10 @@ import requests
 from bs4 import BeautifulSoup as bs
 from security import TOKEN
 
-month = {1:'yanvar', 2:'fevral', 3:'mart',
-         4:'aprel', 5:'may', 6:'iyun',
-         7:'iyul', 8:'avgust', 9:'sentyabr',
-         10:'oktyabr', 11:'noyabr', 12:'dekabr'}
+month = {1:['yanvar', 31], 2:['fevral', 29], 3:['mart', 31],
+         4:['aprel', 30], 5:['may', 31], 6:['iyun', 30],
+         7:['iyul', 31], 8:['avgust', 31], 9:['sentyabr', 30],
+         10:['oktyabr', 31], 11:['noyabr', 30], 12:['dekabr', 31]}
 def params_today(day):
     cookies = {
         'PHPSESSID': 'bn50sroom2odt7dfo228id4l62',
@@ -35,7 +35,7 @@ def params_today(day):
         'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36',
     }
     if day:
-        response = requests.get(f'https://kakoysegodnyaprazdnik.ru/baza/{month[day[1]]}/{day[0]}/', cookies=cookies, headers=headers)
+        response = requests.get(f'https://kakoysegodnyaprazdnik.ru/baza/{month[day[1]][0]}/{day[0]}/', cookies=cookies, headers=headers)
     else:
         response = requests.get('https://kakoysegodnyaprazdnik.ru/', cookies=cookies, headers=headers)
     #return bs(response.text, 'html.parser').head
@@ -76,12 +76,15 @@ async def echo(message: aiogram.types.Message):
                     day = [int(mess_analyse[1]), int(mess_analyse[0])]
                 else:
                     day = [int(mess_analyse[0]), int(mess_analyse[1])]
+                if  day[0] > month[day[1]][1]:
+                    await message.answer(f'Uncorrect numbers: max of {month[day[1]][1]} days in the month')
+                    return
 
             else:
                 await message.answer('Date shoud have only numbers')
                 return
         else:
-            await message.answer('Uncorrect date')
+            await message.answer('Uncorrect date. Write by form:\nDAY.NUM_MONTH')
             return
     else:
         day = None
