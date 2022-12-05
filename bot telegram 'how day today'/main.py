@@ -61,6 +61,10 @@ bot = aiogram.Bot(token=TOKEN)
 db = aiogram.Dispatcher(bot)
 
 
+@db.message_handler(commands=['help'])
+async def echo(message: aiogram.types.Message):
+    await message.answer('Write by form:\n/day DAY.NUM_MONTH (for ex "/day 31.12")\nor just\n/day')
+
 
 @db.message_handler(commands=['day'])
 async def echo(message: aiogram.types.Message):
