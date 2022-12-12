@@ -5,7 +5,7 @@ import requests
 import traceback
 from random import choice
 from bs4 import BeautifulSoup as bs
-from security import TOKEN2 as TOKEN
+from security import TOKEN
 
 
 class Bot_HDTD():
@@ -66,6 +66,7 @@ class Bot_HDTD():
     def command_help(self):
         return 'DAY_BOT:\nWrite by form:\n/day DAY.NUM_MONTH (for ex "/day 31.12")\nor just\n/day\n-------------\n' \
                'WORDS_BOT:\n/huy word_phrase - add in base\n/yuh word_phrase - delete phrase in base'
+
     def command_day(self, message):
         self.message = message
         mess_analyse = self.message.text.split(' ')
@@ -103,13 +104,27 @@ class Bot_HDTD():
 class Bot_Huyot():
     def __init__(self):
         #Основная БД
-        self.conn = sqlite3.connect('huyot_2.db')
+        self.conn = sqlite3.connect('huyot.db')
         self.cur = self.conn.cursor()
         self.cur.execute("""CREATE TABLE IF NOT EXISTS words(
            text TEXT PRIMARY KEY,
            answer_text TEXT);
         """)
-    #Команда добавления в основную БД
+        self.conn.commit()
+        #Разгребная БД
+        self.cur_other = self.conn.cursor()
+        self.cur_other.execute("""CREATE TABLE IF NOT EXISTS words_other(
+                   text TEXT PRIMARY KEY,
+                   answer_text TEXT);
+                """)
+        self.conn.commit()
+    #Проверка на админа, шо бэ чужие шаловливые ручонки не лазили
+    def worthy_or_not_worthy(self, id):
+        self.id = id
+        if self.id == 829969304 or self.id == 548522557 or self.id == 379200653:
+            return True
+        return False
+    #Команда добавления в основную/не основную БД
     def command_huy(self, message):
         self.message = message
         text = self.message.text
@@ -118,7 +133,10 @@ class Bot_Huyot():
             # print(text)
             if len(text) > 1:
                 text_db = [' '.join(text[0].split()).lower(), ' '.join(text[1].split())]
-                db_info = 'words'
+                if self.worthy_or_not_worthy(message['from']['id']):
+                    db_info = 'words'
+                else:
+                    db_info = 'words_other'
                 text_in_db = self.cur.execute(f'SELECT answer_text FROM {db_info} WHERE text = "{text_db[0]}"').fetchone()
                 if text_in_db:
                     text_in_db = text_in_db[0] + '\n' + str(text_db[1])
@@ -139,7 +157,7 @@ class Bot_Huyot():
     def command_yuh(self, message):
         self.message = message
         text = self.message.text
-        if 1:
+        if self.worthy_or_not_worthy(message['from']['id']):
             if re.search(r'(_)', text):
                 text = text[4:].split('_')
                 # print(text)
@@ -168,6 +186,25 @@ class Bot_Huyot():
                 return 'Форма: /yuh слово _ фраза, а ты пидор'
         else:
             return 'Авторизатион файлед, мотхерфатхер'
+    #Команда вывода для Админов не основной БД
+    def command_db_other(self, message):
+        if self.worthy_or_not_worthy(message['from']['id']):
+            text = ''
+            db = self.cur_other.execute('SELECT * FROM words_other').fetchall()
+            for i in db:
+                text += i[0] + ':\n' + i[1] + '\n--------\n'
+            if text == '':
+                return 'Пустё'
+            return text
+
+        else:
+            return 'Не лезь, она тебя сожрет'
+    #Удаление значений из не основной БД
+    def command_db_other_deleted(self, message):
+        pass
+    #Перенос значений из не основной БД в основную БД
+    def command_db_other_in_db(self, message):
+        pass
     #
     def bot_answer(self, message):
         text = ' '.join(message.text.split()).lower()
@@ -202,7 +239,7 @@ async def echo(message: aiogram.types.Message):
     print(*[str(message['from']['username']), str(message.text), str(message['chat']['type'])], sep=' -*- ')
     if re.search(r'(^/day)', message.text):
        text = Bot_HDTD().command_day(message)
-    elif re.search(r'(^/help)', message.text) or re.search(r'(^/start)', message.text) :
+    elif re.search(r'(^/help)', message.text) or re.search(r'(^/start)', message.text):
         text = Bot_HDTD().command_help()
         print('*' * 5, text)
     elif re.search(r'(^/huy)', message.text):
@@ -211,6 +248,8 @@ async def echo(message: aiogram.types.Message):
     elif re.search(r'(^/yuh)', message.text):
         text = Bot_Huyot().command_yuh(message)
         print('*' * 5, text)
+    elif re.search(r'(^/db)', message.text):
+        text = Bot_Huyot().command_db_other(message)
     else:
         text = Bot_Huyot().bot_answer(message)
         if text:
