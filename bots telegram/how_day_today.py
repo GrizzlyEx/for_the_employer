@@ -119,9 +119,9 @@ class Bot_Huyot():
                 """)
         self.conn.commit()
     #Проверка на админа, шо бэ чужие шаловливые ручонки не лазили
-    def worthy_or_not_worthy(self, id):
-        self.id = id
-        if self.id == 829969304 or self.id == 548522557 or self.id == 379200653:
+    def worthy_or_not_worthy(self, message):
+        user_id = message['from']['id']
+        if user_id == 829969304 or user_id == 548522557 or user_id == 379200653:
             return True
         return False
     #Команда добавления в основную/не основную БД
@@ -133,7 +133,7 @@ class Bot_Huyot():
             # print(text)
             if len(text) > 1:
                 text_db = [' '.join(text[0].split()).lower(), ' '.join(text[1].split())]
-                if self.worthy_or_not_worthy(message['from']['id']):
+                if self.worthy_or_not_worthy(message):
                     db_info = 'words'
                 else:
                     db_info = 'words_other'
@@ -157,7 +157,7 @@ class Bot_Huyot():
     def command_yuh(self, message):
         self.message = message
         text = self.message.text
-        if self.worthy_or_not_worthy(message['from']['id']):
+        if self.worthy_or_not_worthy(message):
             if re.search(r'(_)', text):
                 text = text[4:].split('_')
                 # print(text)
@@ -185,10 +185,10 @@ class Bot_Huyot():
             else:
                 return 'Форма: /yuh слово _ фраза, а ты пидор'
         else:
-            return 'Авторизатион файлед, мотхерфатхер'
+            return 'Авторизатион фeйлед, мотхерфатхер'
     #Команда вывода для Админов не основной БД
     def command_db_other(self, message):
-        if self.worthy_or_not_worthy(message['from']['id']):
+        if self.worthy_or_not_worthy(message):
             text = ''
             db = self.cur_other.execute('SELECT * FROM words_other').fetchall()
             for i in db:
@@ -199,13 +199,31 @@ class Bot_Huyot():
 
         else:
             return 'Не лезь, она тебя сожрет'
+    #Понятно без лишних слов :D
+    #Уточнение: вывод всех значений id = 1 - основная бд, 2 - второго бота
+    def for_Marusyas_curiosity(self, message, id_db):
+        if self.worthy_or_not_worthy(message):
+            text = ''
+            if id_db == 1:
+                db = self.cur.execute('SELECT * FROM words').fetchall()
+            elif id_db == 2:
+                conn_2 = sqlite3.connect('huyot_2.db')
+                cur_2 = conn_2.cursor()
+                db = cur_2.execute('SELECT * FROM words').fetchall()
+            for i in db:
+                text += '-' + i[0] + ': ' + ' | '.join(i[1].split('\n')) + '\n'
+            if text == '':
+                return 'Пустё'
+            return text
+        else:
+            return 'Авторизатион фeйлед, мотхерфатхер'
     #Удаление значений из не основной БД
     def command_db_other_deleted(self, message):
         pass
     #Перенос значений из не основной БД в основную БД
     def command_db_other_in_db(self, message):
         pass
-    #
+    #Механика ответа
     def bot_answer(self, message):
         text = ' '.join(message.text.split()).lower()
         #print(text)
@@ -248,8 +266,15 @@ async def echo(message: aiogram.types.Message):
     elif re.search(r'(^/yuh)', message.text):
         text = Bot_Huyot().command_yuh(message)
         print('*' * 5, text)
+    elif re.search(r'(^/db_1)', message.text) or re.search(r'(^/db_2)', message.text):
+        if re.search(r'(^/db_1)', message.text):
+            id_db = 1
+        else:
+            id_db = 2
+        text = Bot_Huyot().for_Marusyas_curiosity(message, id_db)
     elif re.search(r'(^/db)', message.text):
         text = Bot_Huyot().command_db_other(message)
+
     else:
         text = Bot_Huyot().bot_answer(message)
         if text:
