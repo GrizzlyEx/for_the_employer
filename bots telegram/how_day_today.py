@@ -5,8 +5,13 @@ import requests
 import traceback
 from random import choice
 from bs4 import BeautifulSoup as bs
+from time import perf_counter
 from security import TOKEN
 
+
+offline = False
+time_stalker = None
+time_offline = None
 
 class Bot_HDTD():
     def __init__(self):
@@ -88,7 +93,7 @@ class Bot_HDTD():
                     return 'Date shoud have only numbers'
 
             else:
-                return 'Uncorrect date. Write by form:\nDAY.NUM_MONTH'
+                return 'Uncorrect date. Write by form:\nDAY.NUM_MONTH (for ex "/day 31.12")'
 
         else:
             day = None
@@ -100,7 +105,7 @@ class Bot_HDTD():
             return 'MY HEART IS BROKEEEEEN'
 
 
-# Dangerous! A lot of Russian mat
+# Dangerous! A lot of Russians mat
 class Bot_Huyot():
     def __init__(self):
         #Основная БД
@@ -118,12 +123,14 @@ class Bot_Huyot():
                    answer_text TEXT);
                 """)
         self.conn.commit()
+
     #Проверка на админа, шо бэ чужие шаловливые ручонки не лазили
     def worthy_or_not_worthy(self, message):
         user_id = message['from']['id']
         if user_id == 829969304 or user_id == 548522557 or user_id == 379200653:
             return True
         return False
+
     #Команда добавления в основную/не основную БД
     def command_huy(self, message):
         self.message = message
@@ -153,6 +160,7 @@ class Bot_Huyot():
                 return 'Форма: /huy слово _ фраза, а ты пидор'
         else:
             return 'Форма: /huy слово _ фраза, а ты пидор'
+
     #Команда удаления из основной БД
     def command_yuh(self, message):
         self.message = message
@@ -186,6 +194,7 @@ class Bot_Huyot():
                 return 'Форма: /yuh слово _ фраза, а ты пидор'
         else:
             return 'Авторизатион фeйлед, мотхерфатхер'
+
     #Команда вывода для Админов не основной БД
     def command_db_other(self, message):
         if self.worthy_or_not_worthy(message):
@@ -199,6 +208,7 @@ class Bot_Huyot():
 
         else:
             return 'Не лезь, она тебя сожрет'
+
     #Понятно без лишних слов :D
     #Уточнение: вывод всех значений id = 1 - основная бд, 2 - второго бота
     def for_Marusyas_curiosity(self, message, id_db):
@@ -217,14 +227,63 @@ class Bot_Huyot():
             return text
         else:
             return 'Авторизатион фeйлед, мотхерфатхер'
+
+    def command_offline(self, message):
+        if self.worthy_or_not_worthy(message):
+            global offline, time_offline, time_stalker
+            if len(message.text) > 4:
+                if len(message.text.split()) > 1:
+                    message_ = message.text.split()[1]
+                    if message_.isdigit():
+
+                        time_stalker = perf_counter()
+                        time_offline = int(message_) * 60
+                        offline = True
+                        return f'Умолкаю на {message_} минут'
+                    return 'Число целое пиши, а не вотэтовот'
+                return '/off [кол-во минут]'
+
+            else:
+                time_offline = None
+                time_stalker = None
+
+                if offline == True:
+                    offline = False
+                    return 'ВЕЧЕР В ХАТУ'
+                else:
+                    offline = True
+                    return 'Умолкаю'
+
+    def chech_offline(self, message):
+        global offline, time_offline, time_stalker
+        if time_stalker:
+            if time_stalker+time_offline < perf_counter():
+                time_stalker = None
+                time_offline = None
+                offline = False
+
+    def command_status(self, message):
+        global offline, time_stalker, time_offline
+        if offline:
+            if time_stalker:
+                timet = int((time_offline+time_stalker)-perf_counter())
+                return f'Я молчу еще {timet//60} минут и {timet%60} секунд'
+            return 'Я молчу'
+        return 'Жив. Цел. Орел'
+
     #Удаление значений из не основной БД
     def command_db_other_deleted(self, message):
         pass
+
     #Перенос значений из не основной БД в основную БД
     def command_db_other_in_db(self, message):
         pass
+
     #Механика ответа
     def bot_answer(self, message):
+        global offline
+        if offline == True:
+            return
         text = ' '.join(message.text.split()).lower()
         #print(text)
         equal = None
@@ -253,8 +312,8 @@ db = aiogram.Dispatcher(bot)
 
 @db.message_handler()
 async def echo(message: aiogram.types.Message):
-    text = None
     print(*[str(message['from']['username']), str(message.text), str(message['chat']['type'])], sep=' -*- ')
+    Bot_Huyot().chech_offline(message)
     if re.search(r'(^/day)', message.text):
        text = Bot_HDTD().command_day(message)
     elif re.search(r'(^/help)', message.text) or re.search(r'(^/start)', message.text):
@@ -274,7 +333,10 @@ async def echo(message: aiogram.types.Message):
         text = Bot_Huyot().for_Marusyas_curiosity(message, id_db)
     elif re.search(r'(^/db)', message.text):
         text = Bot_Huyot().command_db_other(message)
-
+    elif re.search(r'(^/off)', message.text):
+        text = Bot_Huyot().command_offline(message)
+    elif re.search(r'(^/status)', message.text):
+        text = Bot_Huyot().command_status(message)
     else:
         text = Bot_Huyot().bot_answer(message)
         if text:
