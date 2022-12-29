@@ -8,12 +8,12 @@ from bs4 import BeautifulSoup as bs
 from time import perf_counter
 from security import TOKEN
 
-
+letter_output = None
 offline = False
 time_stalker = None
 time_offline = None
 
-class Bot_HDTD():
+class BotHDTD():
     def __init__(self):
         self.month = {1:['yanvar', 31], 2:['fevral', 29], 3:['mart', 31],
              4:['aprel', 30], 5:['may', 31], 6:['iyun', 30],
@@ -68,9 +68,20 @@ class Bot_HDTD():
         return message
         #print(bs(text, 'html.parser').div.div.span.text)
 
-    def command_help(self):
-        return 'DAY_BOT:\nWrite by form:\n/day DAY.NUM_MONTH (for ex "/day 31.12")\nor just\n/day\n-------------\n' \
-               'WORDS_BOT:\n/huy word_phrase - add in base\n/yuh word_phrase - delete phrase in base'
+    def command_help(self, message):
+        text = 'DAY_BOT:\nWrite by form:\n/day DAY.NUM_MONTH (for ex "/day 31.12")\nor just\n/day\n-------------\n' \
+               'WORDS_BOT:\n/huy word_phrase - add in base\n/yuh word_phrase - delete phrase in base\n' \
+               '/status - information about sleep'
+        if BotHuyot().worthy_or_not_worthy(message):
+            text += '\n\nIT\'S FOR ADMINS OF THIS BOT!\n/db - chech not the main one DB\n/db_1 - check main DB\n' \
+                    '/db_2 - check kontur\'s DB'
+            if message['from']['id'] == 829969304:
+                text += '\n-------------\nIT\'S ONLY FOR ME!\nBot NO_LETTER:\n' \
+                        '/actual [letter][0 or 1, where 0 - not actual, 1 - actual] ' \
+                        '(for ex "/actual ё1") - change actuality letter\n' \
+                        '/letter - choose a random letter\n' \
+                        '/change [letter letter letter ...] - change the trigger letter/s'
+        return text
 
     def command_day(self, message):
         self.message = message
@@ -106,7 +117,7 @@ class Bot_HDTD():
 
 
 # Dangerous! A lot of Russians mat
-class Bot_Huyot():
+class BotHuyot():
     def __init__(self):
         #Основная БД
         self.conn = sqlite3.connect('huyot.db')
@@ -253,6 +264,7 @@ class Bot_Huyot():
                 else:
                     offline = True
                     return 'Умолкаю'
+        return 'Тока для избранных'
 
     def chech_offline(self, message):
         global offline, time_offline, time_stalker
@@ -306,6 +318,76 @@ class Bot_Huyot():
             return choice(equal[0].split('\n'))
 
 
+class NoLetter():
+    def __init__(self):
+        # Основная БД
+        self.conn = sqlite3.connect('letter.db')
+        self.cur = self.conn.cursor()
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS letters(
+                   letter TEXT PRIMARY KEY,
+                   actual INT);
+                """)
+
+    def added_more_letter(self):
+        letters = 'АБВГДЕËЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'
+        not_actial_list = 'ËЙФХЦЧШЩЪЫЬЭЮЯ'
+        for letter in letters:
+            actual = 1
+            if letter in not_actial_list:
+                actual = 0
+            self.cur.execute(f'INSERT OR REPLACE INTO letters VALUES(?, ?);', [letter, actual])
+        self.conn.commit()
+
+    def worty_letter(self, message):
+        if message['from']['id'] == 829969304:
+            return True
+        return False
+
+    def change_actual(self, message):
+        if self.worty_letter(message):
+            if len(message) > 9:
+                if message[9].isdigit():
+                    #print(message[8].upper())
+                    if self.cur.execute(f'SELECT * FROM letters WHERE letter = "{message[8].upper()}"').fetchone() or \
+                            message[8].upper() == 'Ë':
+                        char = message[8].upper()
+                        #print(char)
+                        self.cur.execute(f'UPDATE letters SET actual = {message[9]} WHERE letter = "{char}"')
+                        self.conn.commit()
+                        return 'OK'
+        return 'Not OK'
+
+    def output_letter(self, message):
+        if self.worty_letter(message):
+            global letter_output
+            list_from_db = self.cur.execute(f'SELECT * from letters').fetchall()
+            letter = choice(list_from_db)
+            print(letter)
+            letter_output = [letter[0]]
+            if letter[1] == 0:
+                letter_2 = self.cur.execute(f'SELECT * from letters WHERE letter != "{letter[0]}" and actual = 0').fetchall()
+                letter_output.append(choice(letter_2)[0])
+            return letter_output
+        return 'Ti imeesh problemi?'
+
+    def change_letter_value(self, message):
+        if self.worty_letter(message):
+            global letter_output
+            if len(message.text) > 8:
+                letter_output = message.text[8:].upper().split()
+                print(letter_output)
+                return 'ok'
+        return 'NOT OK'
+
+    def check_pidor(self, message):
+        if self.worty_letter(message):
+            global letter_output
+            if letter_output:
+                for i in letter_output:
+                    if i in message.text.upper():
+                        return 'Za bazarom sledi!'
+
+#NoLetter().output_letter('sss')
 bot = aiogram.Bot(token=TOKEN)
 db = aiogram.Dispatcher(bot)
 
@@ -313,32 +395,39 @@ db = aiogram.Dispatcher(bot)
 @db.message_handler()
 async def echo(message: aiogram.types.Message):
     print(*[str(message['from']['username']), str(message.text), str(message['chat']['type'])], sep=' -*- ')
-    Bot_Huyot().chech_offline(message)
+    BotHuyot().chech_offline(message)
     if re.search(r'(^/day)', message.text):
-       text = Bot_HDTD().command_day(message)
+       text = BotHDTD().command_day(message)
     elif re.search(r'(^/help)', message.text) or re.search(r'(^/start)', message.text):
-        text = Bot_HDTD().command_help()
+        text = BotHDTD().command_help(message)
         print('*' * 5, text)
     elif re.search(r'(^/huy)', message.text):
-        text = Bot_Huyot().command_huy(message)
+        text = BotHuyot().command_huy(message)
         print('*' * 5, text)
     elif re.search(r'(^/yuh)', message.text):
-        text = Bot_Huyot().command_yuh(message)
+        text = BotHuyot().command_yuh(message)
         print('*' * 5, text)
     elif re.search(r'(^/db_1)', message.text) or re.search(r'(^/db_2)', message.text):
         if re.search(r'(^/db_1)', message.text):
             id_db = 1
         else:
             id_db = 2
-        text = Bot_Huyot().for_Marusyas_curiosity(message, id_db)
+        text = BotHuyot().for_Marusyas_curiosity(message, id_db)
     elif re.search(r'(^/db)', message.text):
-        text = Bot_Huyot().command_db_other(message)
+        text = BotHuyot().command_db_other(message)
     elif re.search(r'(^/off)', message.text):
-        text = Bot_Huyot().command_offline(message)
+        text = BotHuyot().command_offline(message)
     elif re.search(r'(^/status)', message.text):
-        text = Bot_Huyot().command_status(message)
+        text = BotHuyot().command_status(message)
+    elif re.search(r'(^/actual)', message.text):
+        text = NoLetter().change_actual(message.text)
+    elif re.search(r'(^/letter)', message.text):
+        text = ', '.join(NoLetter().output_letter(message.text))
+    elif re.search(r'(^/change)', message.text):
+        text = NoLetter().change_letter_value(message)
     else:
-        text = Bot_Huyot().bot_answer(message)
+        text = BotHuyot().bot_answer(message)
+        text = NoLetter().check_pidor(message)
         if text:
             print('*' * 5, text)
     if text:
