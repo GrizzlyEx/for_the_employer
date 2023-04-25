@@ -1,17 +1,25 @@
 import re
 import sqlite3
+import time
+
 import aiogram
 import requests
 import traceback
 from random import choice
 from bs4 import BeautifulSoup as bs
 from time import perf_counter
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+
 from security import TOKEN
 
 letter_output = None
 offline = False
 time_stalker = None
 time_offline = None
+offline_noletter = False
 
 class BotHDTD():
     def __init__(self):
@@ -345,24 +353,25 @@ class NoLetter():
 
     def change_actual(self, message):
         if self.worty_letter(message):
-            if len(message) > 9:
-                if message[9].isdigit():
+            if len(message.text) > 9:
+                if message.text[9].isdigit():
                     #print(message[8].upper())
-                    if self.cur.execute(f'SELECT * FROM letters WHERE letter = "{message[8].upper()}"').fetchone() or \
-                            message[8].upper() == 'Ë':
-                        char = message[8].upper()
+                    if self.cur.execute(f'SELECT * FROM letters WHERE letter = "{message.text[8].upper()}"').fetchone() or \
+                            message.text[8].upper() == 'Ë':
+                        char = message.text[8].upper()
                         #print(char)
-                        self.cur.execute(f'UPDATE letters SET actual = {message[9]} WHERE letter = "{char}"')
+                        self.cur.execute(f'UPDATE letters SET actual = {message.text[9]} WHERE letter = "{char}"')
                         self.conn.commit()
                         return 'OK'
         return 'Not OK'
 
     def output_letter(self, message):
         if self.worty_letter(message):
-            global letter_output
+            global letter_output, offline_noletter
+            offline_noletter = False
             list_from_db = self.cur.execute(f'SELECT * from letters').fetchall()
             letter = choice(list_from_db)
-            print(letter)
+            #print(letter)
             letter_output = [letter[0]]
             if letter[1] == 0:
                 letter_2 = self.cur.execute(f'SELECT * from letters WHERE letter != "{letter[0]}" and actual = 0').fetchall()
@@ -372,20 +381,77 @@ class NoLetter():
 
     def change_letter_value(self, message):
         if self.worty_letter(message):
-            global letter_output
+            global letter_output, offline_noletter
             if len(message.text) > 8:
+                offline_noletter = False
                 letter_output = message.text[8:].upper().split()
-                print(letter_output)
+                #print(letter_output)
                 return 'ok'
+            else:
+                offline_noletter = True
+                return 'off'
         return 'NOT OK'
 
     def check_pidor(self, message):
-        if self.worty_letter(message):
+        global offline_noletter
+        if self.worty_letter(message) and not offline_noletter:
             global letter_output
             if letter_output:
                 for i in letter_output:
                     if i in message.text.upper():
                         return 'Za bazarom sledi!'
+        return ''
+
+
+class Translater():
+    def __init__(self, text_message):
+        self.text_message = text_message
+        dict_ascii = {
+            ' ': '%20',
+            '/': '%2F',
+            '?': '%3F',
+            ',': '%2C',
+            '\\': '%5C',
+            '@': '%40',
+            '#': '%23',
+            '$': '%24',
+            '%': '%25',
+            '^': '%5E',
+            '&': '%26',
+            '=': '%3D',
+            ':': '%3A',
+            '\'': '%27',
+            '`': '%60',
+            '{': '%7B',
+            '}': '%7D',
+            '[': '%5B',
+            ']': '%5D',
+            '+': '%2B',
+            '|': '%7C',
+        }
+        self.text = ''
+        for i in text_message:
+            if i in dict_ascii:
+                self.text += dict_ascii[i]
+            else:
+                self.text += i
+    def translate_v2(self):
+
+        print(response.text)
+
+        # Note: json_data will not be serialized by requests
+        # exactly as it was in the original request.
+        # data = '{ "text": "Some text to translate",  "source_language": "en", "translation_language": "fr"}'
+        # response = requests.post('https://api.translate.com/translate/v1/mt', headers=headers, data=data)
+    def translate(self, target='ru'):
+        if self.text != '':
+            driver = webdriver.Chrome('C:\\Users\\\SaltanovaAO\\\PycharmProjects\\main\\chromedriver.exe')
+            driver.get(f"https://translate.google.ru/?sl=auto&tl={target}&text={self.text}")
+            elem = driver.find_element(By.XPATH, '//div[@aria-live=\"polite\"]')
+            #time.sleep(1000)
+            #print(*elem.text.split('\n'), sep='\n')
+            return ' '.join(elem.text.split('\n')[:-1])
+
 
 #NoLetter().output_letter('sss')
 bot = aiogram.Bot(token=TOKEN)
@@ -394,40 +460,57 @@ db = aiogram.Dispatcher(bot)
 
 @db.message_handler()
 async def echo(message: aiogram.types.Message):
-    print(*[str(message['from']['username']), str(message.text), str(message['chat']['type'])], sep=' -*- ')
+    #print(*[str(message['from']['username']), str(message.text), str(message['chat']['type'])], sep=' -*- ')
+    print(message)
     BotHuyot().chech_offline(message)
-    if re.search(r'(^/day)', message.text):
+    if re.search(r'(^/day)', message.text.lower()):
        text = BotHDTD().command_day(message)
-    elif re.search(r'(^/help)', message.text) or re.search(r'(^/start)', message.text):
+    elif re.search(r'(^/help)', message.text.lower()) or re.search(r'(^/start)', message.text.lower()):
         text = BotHDTD().command_help(message)
         print('*' * 5, text)
-    elif re.search(r'(^/huy)', message.text):
+    elif re.search(r'(^/huy)', message.text.lower()):
         text = BotHuyot().command_huy(message)
         print('*' * 5, text)
-    elif re.search(r'(^/yuh)', message.text):
+    elif re.search(r'(^/yuh)', message.text.lower()):
         text = BotHuyot().command_yuh(message)
         print('*' * 5, text)
-    elif re.search(r'(^/db_1)', message.text) or re.search(r'(^/db_2)', message.text):
+    elif re.search(r'(^/db_1)', message.text.lower()) or re.search(r'(^/db_2)', message.text.lower()):
         if re.search(r'(^/db_1)', message.text):
             id_db = 1
         else:
             id_db = 2
         text = BotHuyot().for_Marusyas_curiosity(message, id_db)
-    elif re.search(r'(^/db)', message.text):
+    elif re.search(r'(^/db)', message.text.lower()):
         text = BotHuyot().command_db_other(message)
-    elif re.search(r'(^/off)', message.text):
+    elif re.search(r'(^/off)', message.text.lower()):
         text = BotHuyot().command_offline(message)
-    elif re.search(r'(^/status)', message.text):
+    elif re.search(r'(^/status)', message.text.lower()):
         text = BotHuyot().command_status(message)
-    elif re.search(r'(^/actual)', message.text):
-        text = NoLetter().change_actual(message.text)
-    elif re.search(r'(^/letter)', message.text):
-        text = ', '.join(NoLetter().output_letter(message.text))
-    elif re.search(r'(^/change)', message.text):
+    elif re.search(r'(^/actual)', message.text.lower()):
+        text = NoLetter().change_actual(message)
+    elif re.search(r'(^/letter)', message.text.lower()):
+        text = ', '.join(NoLetter().output_letter(message))
+    elif re.search(r'(^/change)', message.text.lower()):
         text = NoLetter().change_letter_value(message)
+    elif re.search(r'(^переведи)', message.text.lower()):
+        text = Translater(message).translate()
     else:
-        text = BotHuyot().bot_answer(message)
-        text = NoLetter().check_pidor(message)
+        text_message = ''
+        if 'reply_to_message' in message:
+            if 'text' in message['reply_to_message']:
+                text_message = message['reply_to_message']['text']
+        elif 'forward_from' in message:
+            text_message = message['text']
+        if text_message != '':
+            text = Translater(text_message).translate()
+        else:
+            text = BotHuyot().bot_answer(message)
+        text_other = NoLetter().check_pidor(message)
+        if text_other:
+            if text:
+                text += '\n' + text_other
+            else:
+                text = text_other
         if text:
             print('*' * 5, text)
     if text:
