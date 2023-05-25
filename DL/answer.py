@@ -90,3 +90,4 @@ print(f'BLUE = {road_3_result[0]}, RED = {road_3_result[1]}')
 print(f'\n\nTOTAL ON ALL ROADS:\n'
       f'BLUE = {road_1_result[0]+road_2_result[0]+road_3_result[0]}, '
       f'RED = {road_1_result[1]+road_2_result[1]+road_3_result[1]}')
+
