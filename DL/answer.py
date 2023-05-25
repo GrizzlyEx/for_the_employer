@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 
 
 blue = 0
-red = 0
-ids = []
+red = 0
 
 
 def funk(road, lens=1, interval_hours=2):
@@ -15,27 +14,19 @@ def funk(road, lens=1, interval_hours=2):
             # print(f'{road[i_][2]} - {road[i_ + lens][2]}')
             if road[i_][3] > road[i_ + lens][3]:
                 # print(road[i_][1])
-                if road[i_][1] not in ids:
-                    ids.append(road[i_][1])
-                    if road[i_][0] == 'синяя':
-                        # print('blue')
-                        blue += 1
-                    else:
-                        # print('red')
-                        red += 1
+                if road[i_][0] == 'синяя':
+                    # print('blue')
+                    blue += 1
                 else:
-                    continue
-            elif road[i_][3] < road[i_ + lens][3]:
-                if road[i_ + lens][1] not in ids:
-                    ids.append(road[i_ + lens][1])
-                    if road[i_ + lens][0] == 'синяя':
-                        # print('blue')
-                        blue += 1
-                    else:
-                        # print('red')
-                        red += 1
+                    # print('red')
+                    red += 1
+            elif road[i_][3] < road[i_ + lens][3]:
+                if road[i_ + lens][0] == 'синяя':
+                    # print('blue')
+                    blue += 1
                 else:
-                    continue
+                    # print('red')
+                    red += 1
             try:
                 lens += 1
                 funk(road, lens)
@@ -71,20 +62,17 @@ for i in all_road:
 
 print('ROAD 1:')
 red = 0
-blue = 0
-ids = []
+blue = 0
 road_1_result = funk(road_1)
 print(f'BLUE = {road_1_result[0]}, RED = {road_1_result[1]}')
 print('\nROAD 2:')
 red = 0
-blue = 0
-ids = []
+blue = 0
 road_2_result = funk(road_2)
 print(f'BLUE = {road_2_result[0]}, RED = {road_2_result[1]}')
 print('\nROAD 3:')
 red = 0
-blue = 0
-ids = []
+blue = 0
 road_3_result = funk(road_3)
 print(f'BLUE = {road_3_result[0]}, RED = {road_3_result[1]}')
 print(f'\n\nTOTAL ON ALL ROADS:\n'
