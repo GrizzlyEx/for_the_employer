@@ -6,7 +6,7 @@ red = 0
 
 
 def funk(road, lens=1, interval_hours=2):
-    global blue, red, ids
+    global blue, red
     for i_ in range(len(road[-1])):
         if road[i_][2] > road[i_ + lens][2] - timedelta(hours=interval_hours):
             # print(road[i], road[i+1])
@@ -31,7 +31,7 @@ def funk(road, lens=1, interval_hours=2):
                 lens += 1
                 funk(road, lens)
             except:
-                pass
+                lens = 1
     return [blue, red]
 
 
