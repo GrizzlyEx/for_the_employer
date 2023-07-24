@@ -9,10 +9,6 @@ from random import choice
 # from bs4 import BeautifulSoup as bs
 from time import perf_counter
 
-from selenium import webdriver
-# from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-
 from security import TOKEN
 
 letter_output = None
@@ -28,10 +24,10 @@ class BotHDTD():
     '''
 
     def __init__(self):
-        self.month = {1: ['yanvar', 31], 2: ['fevral', 29], 3: ['mart', 31],
-                      4: ['aprel', 30], 5: ['may', 31], 6: ['iyun', 30],
-                      7: ['iyul', 31], 8: ['avgust', 31], 9: ['sentyabr', 30],
-                      10: ['oktyabr', 31], 11: ['noyabr', 30], 12: ['dekabr', 31]}
+        self.month = {1: ['yanvar', 31, 'Января'], 2: ['fevral', 29, 'Февраля'], 3: ['mart', 31, 'Марта'],
+                      4: ['aprel', 30, 'Апреля'], 5: ['may', 31, 'Мая'], 6: ['iyun', 30, 'Июня'],
+                      7: ['iyul', 31, 'Июля'], 8: ['avgust', 31, 'Августа'], 9: ['sentyabr', 30, 'Сентября'],
+                      10: ['oktyabr', 31, 'Октября'], 11: ['noyabr', 30, 'Ноября'], 12: ['dekabr', 31, 'Декабря']}
         '''
         form DAY.MONTH
         '''
@@ -56,7 +52,8 @@ class BotHDTD():
         ).fetchone()
         if not text_in_db:
             return ''
-        return '\n\n'.join(text_in_db[0].split('\n'))
+        text_in_db = "\n\n".join(text_in_db[0].split("\n"))
+        return f' • {day[0]} {self.month[day[1]][2]} •\n\n{text_in_db}'
 
     def command_help(self, message):
         text = 'DAY_BOT:\nWrite by form:\n/day DAY.NUM_MONTH (for ex "/day 31.12")\nor just\n/day\n-------------\n' \
