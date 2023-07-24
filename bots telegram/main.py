@@ -54,8 +54,8 @@ class BotHDTD():
         text_in_db = self.cur.execute(
             f'SELECT holidays FROM dates WHERE date = "{self.day}"'
         ).fetchone()
-        if text_in_db:
-            text_in_db = ''
+        if not text_in_db:
+            return ''
         return '\n\n'.join(text_in_db[0].split('\n'))
 
     def command_help(self, message):
@@ -63,7 +63,7 @@ class BotHDTD():
                'WORDS_BOT:\n/huy word_phrase - add in base\n/yuh word_phrase - delete phrase in base\n' \
                '/status - information about sleep'
         if BotHuyot().worthy_or_not_worthy(message):
-            text += '\n\nIT\'S FOR ADMINS OF THIS BOT!\n/db - chech not the main one DB\n/db_1 - check main DB\n' \
+            text += '\n\nIT\'S FOR ADMINS OF THIS BOT!\n/db - check not the main one DB\n/db_1 - check main DB\n' \
                     '/db_2 - check kontur\'s DB'
             if message['from']['id'] == 829969304:
                 text += '\n-------------\nIT\'S ONLY FOR ME!\nBot NO_LETTER:\n' \
