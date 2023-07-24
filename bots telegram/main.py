@@ -1,6 +1,6 @@
 import re
 import sqlite3
-# import time
+from datetime import date
 
 import aiogram
 # import requests
@@ -28,13 +28,17 @@ class BotHDTD():
     '''
 
     def __init__(self):
+        self.month = {1: ['yanvar', 31], 2: ['fevral', 29], 3: ['mart', 31],
+                      4: ['aprel', 30], 5: ['may', 31], 6: ['iyun', 30],
+                      7: ['iyul', 31], 8: ['avgust', 31], 9: ['sentyabr', 30],
+                      10: ['oktyabr', 31], 11: ['noyabr', 30], 12: ['dekabr', 31]}
         '''
         form DAY.MONTH
         '''
         self.conn = sqlite3.connect('how_day_today.db')
         self.cur = self.conn.cursor()
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS days(
-           day TEXT PRIMARY KEY,
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS dates(
+           date TEXT PRIMARY KEY,
            holidays TEXT);
     """)
         self.conn.commit()
@@ -43,13 +47,16 @@ class BotHDTD():
         pass
 
     def db_calling(self, day):
-        self.day = day
+        if not day:
+            date_ = date.today()
+            day = [int(date_.day), int(date_.month)]
+        self.day = str(day[0]) + '.' + str(day[1])
         text_in_db = self.cur.execute(
-            f'SELECT holidays FROM days WHERE day = "{self.day}"'
+            f'SELECT holidays FROM dates WHERE date = "{self.day}"'
         ).fetchone()
-        if text_in_db == None:
+        if text_in_db:
             text_in_db = ''
-        return text_in_db
+        return '\n\n'.join(text_in_db[0].split('\n'))
 
     def command_help(self, message):
         text = 'DAY_BOT:\nWrite by form:\n/day DAY.NUM_MONTH (for ex "/day 31.12")\nor just\n/day\n-------------\n' \
@@ -96,6 +103,7 @@ class BotHDTD():
             return f'{self.db_calling(day)}'
         except:
             print('Error')
+            print(traceback.format_exc())
             return 'MY HEART IS BROKEEEEEN'
 
 
@@ -409,8 +417,8 @@ db = aiogram.Dispatcher(bot)
 
 @db.message_handler()
 async def echo(message: aiogram.types.Message):
-    # print(*[str(message['from']['username']), str(message.text), str(message['chat']['type'])], sep=' -*- ')
-    print(message)
+    print(*[str(message['from']['username']), str(message.text), str(message['chat']['type'])], sep=' -*- ')
+    # print(message)
     BotHuyot().chech_offline(message)
     if re.search(r'(^/day)', message.text.lower()):
         text = BotHDTD().command_day(message)
@@ -444,16 +452,7 @@ async def echo(message: aiogram.types.Message):
     elif re.search(r'(^/change)', message.text.lower()):
         text = NoLetter().change_letter_value(message)
     else:
-        text_message = ''
-        if 'reply_to_message' in message:
-            if 'text' in message['reply_to_message']:
-                text_message = message['reply_to_message']['text']
-        elif 'forward_from' in message:
-            text_message = message['text']
-        if text_message != '':
-            text = Translater(text_message).translate()
-        else:
-            text = BotHuyot().bot_answer(message)
+        text = BotHuyot().bot_answer(message)
         text_other = NoLetter().check_pidor(message)
         if text_other:
             if text:

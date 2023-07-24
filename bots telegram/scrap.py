@@ -5,11 +5,6 @@ from random import randint
 
 import sqlite3
 
-from time import sleep
-
-
-
-# январь до 27 сделано - доделать
 
 month = {1:['yanvar', 31], 2:['fevral', 29], 3:['mart', 31],
              4:['aprel', 30], 5:['may', 31], 6:['iyun', 30],
@@ -68,9 +63,3 @@ for month_i in month:
         conn.commit()
         print(date, "ready!")
     #print(month[month_i][0])
-
-
-
-
-
-#sleep(15)
